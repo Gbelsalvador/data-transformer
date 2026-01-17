@@ -1,5 +1,4 @@
-```markdown
-# GB Data Transformer
+# Data Transformer
 
 [![PHP Version](https://img.shields.io/badge/php-%3E%3D8.0-8892BF.svg)](https://packagist.org/packages/GB/data-transformer)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -19,7 +18,7 @@ Une bibliothèque PHP professionnelle pour transformer des données entre plusie
 ## 📦 Installation
 
 ```bash
-composer require GB/data-transformer
+composer require Gbelsalvador/data-transformer
 ```
 
 ## 🚀 Utilisation Rapide
@@ -417,7 +416,7 @@ Cette bibliothèque est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pou
 
 ## 👥 Auteurs
 
-- **GB** - *Développement initial* - [GitHub](https://github.com/GB)
+- **GB el salvador** - *Développement initial* - [GitHub](https://github.com/gbelsalvador)
 
 ## 🙏 Remerciements
 
@@ -449,9 +448,7 @@ try {
 
 - [Issues GitHub](https://github.com/GB/data-transformer/issues)
 - Documentation : Voir les exemples ci-dessus
-- Questions générales : Stack Overflow avec le tag `GB-data-transformer`
 
 ---
 
 ⭐ Si ce projet vous est utile, n'hésitez pas à lui donner une étoile sur GitHub !
-```

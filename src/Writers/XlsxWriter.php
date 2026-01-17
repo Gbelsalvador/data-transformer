@@ -41,7 +41,8 @@ class XlsxWriter implements WriterInterface
                 if (isset($firstRow[0]) === false) {
                     $col = 1;
                     foreach (array_keys($firstRow) as $header) {
-                        $worksheet->setCellValueByColumnAndRow($col, 1, $header);
+                        $cell = $worksheet->getCell([$col, 1]);
+                        $cell->setValue($header);
                         $col++;
                     }
                     $startRow = 2;
@@ -54,7 +55,8 @@ class XlsxWriter implements WriterInterface
                 foreach ($data as $row) {
                     $col = 1;
                     foreach ($row as $value) {
-                        $worksheet->setCellValueByColumnAndRow($col, $rowNum, $value);
+                        $cell = $worksheet->getCell([$col, $rowNum]);
+                        $cell->setValue($value);
                         $col++;
                     }
                     $rowNum++;

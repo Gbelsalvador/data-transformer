@@ -8,6 +8,9 @@ use Gbelsalvador\DataTransformer\Contracts\ReaderInterface;
 use Gbelsalvador\DataTransformer\Exceptions\TransformerException;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use PhpOffice\PhpSpreadsheet\Shared\Date as PhpSpreadsheetDate;
+use PhpOffice\PhpSpreadsheet\Cell\Cell;
+use PhpOffice\PhpSpreadsheet\RichText\RichText;
 
 class XlsxReader implements ReaderInterface
 {
@@ -60,7 +63,7 @@ class XlsxReader implements ReaderInterface
 
         if ($this->hasHeader) {
             for ($col = 1; $col <= $highestColumnIndex; $col++) {
-                $cell = $worksheet->getCellByColumnAndRow($col, 1);
+                $cell = $worksheet->getCell([$col, 1]);
                 $headers[] = $cell->getValue() ?: "Column{$col}";
             }
             $startRow = 2;
@@ -69,8 +72,8 @@ class XlsxReader implements ReaderInterface
         for ($row = $startRow; $row <= $highestRow; $row++) {
             $rowData = [];
             for ($col = 1; $col <= $highestColumnIndex; $col++) {
-                $cell = $worksheet->getCellByColumnAndRow($col, $row);
-                $value = $cell->getValue();
+                $cell = $worksheet->getCell([$col, $row]);
+                $value = $this->normalizeCellValue($cell);
                 
                 if ($this->hasHeader && !empty($headers)) {
                     $rowData[$headers[$col - 1]] = $value;
@@ -82,5 +85,38 @@ class XlsxReader implements ReaderInterface
         }
 
         return $data;
+    }
+
+    private function normalizeCellValue(Cell $cell): mixed
+    {
+        $value = $cell->getValue();
+
+        if ($value instanceof RichText) {
+            $value = $value->getPlainText();
+        }
+
+        
+        if (PhpSpreadsheetDate::isDateTime($cell)) {
+            try {
+                $dt = PhpSpreadsheetDate::excelToDateTimeObject((float) $value);
+                return $dt->format('c');
+            } catch (\Throwable $e) {
+                
+            }
+        }
+
+        if (is_numeric($value)) {
+            
+            if ((string) (int) $value === (string) $value) {
+                return (int) $value;
+            }
+            return (float) $value;
+        }
+
+        if (is_null($value) || is_bool($value)) {
+            return $value;
+        }
+
+        return (string) $value;
     }
 }

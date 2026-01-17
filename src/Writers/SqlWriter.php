@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Gbelsalvador\DataTransformer\Writers;
 
-use Sanchez\DataTransformer\Contracts\WriterInterface;
-use Sanchez\DataTransformer\Exceptions\TransformerException;
+use Gbelsalvador\DataTransformer\Contracts\WriterInterface;
+use Gbelsalvador\DataTransformer\Exceptions\TransformerException;
 
 class SqlWriter implements WriterInterface
 {

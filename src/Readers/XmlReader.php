@@ -64,7 +64,7 @@ class XmlReader implements ReaderInterface
         }
 
         if (count($array) === 0) {
-            return (string) $element;
+            return ['_value' => (string) $element];
         }
 
         return $array;
