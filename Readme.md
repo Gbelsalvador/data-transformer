@@ -82,7 +82,7 @@ $reader = new SqlReader(
     tableName: 'utilisateurs',
     columns: ['id', 'nom', 'email', 'date_inscription'],
     whereClause: 'actif = :actif AND date_inscription > :date',
-    whereParams: [':actif' => 1, ':date' => '2024-01-01']
+    whereParams: [':actif' => 1, ':date' => '2026-01-01']
 );
 
 // Écriture vers XLSX
