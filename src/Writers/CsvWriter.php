@@ -44,13 +44,28 @@ class CsvWriter implements WriterInterface
         $firstRow = reset($data);
         
         if ($this->includeHeader && isset($firstRow[0]) === false) {
-            fputcsv($handle, array_keys($firstRow), $this->delimiter, $this->enclosure);
+            $headers = array_map([$this, 'sanitizeSpreadsheetValue'], array_keys($firstRow));
+            fputcsv($handle, $headers, $this->delimiter, $this->enclosure);
         }
 
         foreach ($data as $row) {
-            fputcsv($handle, $row, $this->delimiter, $this->enclosure);
+            $sanitizedRow = array_map([$this, 'sanitizeSpreadsheetValue'], $row);
+            fputcsv($handle, $sanitizedRow, $this->delimiter, $this->enclosure);
         }
 
         fclose($handle);
+    }
+
+    private function sanitizeSpreadsheetValue(mixed $value): mixed
+    {
+        if (!is_string($value) || $value === '') {
+            return $value;
+        }
+
+        if (preg_match('/^[=\-+@]/', $value) === 1) {
+            return "'" . $value;
+        }
+
+        return $value;
     }
 }

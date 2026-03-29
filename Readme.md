@@ -37,6 +37,35 @@ $writer = new JsonWriter('output.json');
 $transformer->transform($reader, $writer);
 ```
 
+### Pipeline fluent v2
+
+```php
+use Gbelsalvador\DataTransformer\Core\Transformer;
+use Gbelsalvador\DataTransformer\Readers\CsvReader;
+use Gbelsalvador\DataTransformer\Writers\JsonWriter;
+
+$result = (new Transformer())
+    ->read(new CsvReader('users.csv'))
+    ->filter(fn (array $row) => ($row['active'] ?? null) === '1')
+    ->map([
+        'id' => 'user_id',
+        'full_name' => fn (array $row) => trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? '')),
+        'email' => 'email',
+        'country' => 'country'
+    ])
+    ->validate([
+        'id' => 'required|integer',
+        'full_name' => 'required|max:120',
+        'email' => 'required|email',
+        'country' => 'in:FR,BE,CH,CA'
+    ])
+    ->write(new JsonWriter('clean-users.json'));
+
+echo $result->rowsRead();
+echo $result->rowsWritten();
+print_r($result->validationErrors());
+```
+
 ## 📝 Exemples Complets
 
 ### 1. CSV vers JSON
@@ -81,8 +110,13 @@ $reader = new SqlReader(
     pdo: $pdo,
     tableName: 'utilisateurs',
     columns: ['id', 'nom', 'email', 'date_inscription'],
-    whereClause: 'actif = :actif AND date_inscription > :date',
-    whereParams: [':actif' => 1, ':date' => '2026-01-01']
+    filters: [
+        'actif' => 1,
+        'date_inscription' => [
+            'operator' => '>',
+            'value' => '2026-01-01'
+        ]
+    ]
 );
 
 // Écriture vers XLSX
@@ -172,6 +206,35 @@ $transformer->transform($reader, $jsonWriter);
 $reader2 = new CsvReader('input.csv');
 $xmlWriter = new XmlWriter('output.xml');
 $transformer->transform($reader2, $xmlWriter);
+```
+
+### 6. Pipeline avec validation et rapport
+
+```php
+use Gbelsalvador\DataTransformer\Core\Transformer;
+use Gbelsalvador\DataTransformer\Readers\CsvReader;
+use Gbelsalvador\DataTransformer\Writers\XlsxWriter;
+
+$result = (new Transformer())
+    ->read(new CsvReader('contacts.csv'))
+    ->map([
+        'id' => 'id',
+        'name' => fn (array $row) => strtoupper((string) ($row['name'] ?? '')),
+        'email' => 'email'
+    ])
+    ->validate([
+        'id' => 'required|integer',
+        'name' => 'required|max:80',
+        'email' => 'required|email'
+    ])
+    ->write(new XlsxWriter('contacts-clean.xlsx'));
+
+printf(
+    "Read: %d, Written: %d, Invalid: %d\n",
+    $result->rowsRead(),
+    $result->rowsWritten(),
+    $result->rowsInvalid()
+);
 ```
 
 ## 🏗️ Architecture
@@ -286,7 +349,8 @@ new SqlReader(
     string $tableName,
     array $columns = ['*'],
     ?string $whereClause = null,
-    array $whereParams = []
+    array $whereParams = [],
+    array $filters = []
 );
 
 // Writer SQL
@@ -312,6 +376,32 @@ new XlsxWriter(
     string $filePath,
     ?string $sheetName = null
 );
+```
+
+### Pipeline API
+
+```php
+$transformer = new Transformer();
+
+$transformer->read(ReaderInterface $reader);
+$transformer->filter(callable $callback);
+$transformer->map(callable|array $mapping);
+$transformer->validate(array $rules);
+$result = $transformer->write(WriterInterface $writer);
+```
+
+### Validation rules supportÃ©es
+
+```php
+required
+email
+numeric
+integer
+boolean
+date
+max:120
+in:FR,BE,CH
+same:password_confirmation
 ```
 
 ## 🧪 Tests

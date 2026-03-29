@@ -28,10 +28,18 @@ class XmlReader implements ReaderInterface
             throw new TransformerException("XML file not found: {$this->filePath}");
         }
 
-        $xml = simplexml_load_file($this->filePath);
+        libxml_use_internal_errors(true);
+        $xml = simplexml_load_file(
+            $this->filePath,
+            \SimpleXMLElement::class,
+            LIBXML_NONET | LIBXML_COMPACT
+        );
         if ($xml === false) {
+            libxml_get_errors();
+            libxml_clear_errors();
             throw new TransformerException("Invalid XML file: {$this->filePath}");
         }
+        libxml_clear_errors();
 
         $data = [];
         foreach ($xml->children() as $child) {

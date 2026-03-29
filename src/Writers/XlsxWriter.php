@@ -6,6 +6,7 @@ namespace Gbelsalvador\DataTransformer\Writers;
 
 use Gbelsalvador\DataTransformer\Contracts\WriterInterface;
 use Gbelsalvador\DataTransformer\Exceptions\TransformerException;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx as XlsxWriterLib;
 
@@ -42,7 +43,8 @@ class XlsxWriter implements WriterInterface
                     $col = 1;
                     foreach (array_keys($firstRow) as $header) {
                         $cell = $worksheet->getCell([$col, 1]);
-                        $cell->setValue($header);
+                        $safeHeader = $this->isSpreadsheetFormulaString($header) ? "'" . $header : $header;
+                        $cell->setValueExplicit($safeHeader, DataType::TYPE_STRING);
                         $col++;
                     }
                     $startRow = 2;
@@ -56,7 +58,11 @@ class XlsxWriter implements WriterInterface
                     $col = 1;
                     foreach ($row as $value) {
                         $cell = $worksheet->getCell([$col, $rowNum]);
-                        $cell->setValue($value);
+                        if ($this->isSpreadsheetFormulaString($value)) {
+                            $cell->setValueExplicit($value, DataType::TYPE_STRING);
+                        } else {
+                            $cell->setValue($value);
+                        }
                         $col++;
                     }
                     $rowNum++;
@@ -68,5 +74,10 @@ class XlsxWriter implements WriterInterface
         } catch (\Exception $e) {
             throw new TransformerException("Error writing XLSX file: " . $e->getMessage());
         }
+    }
+
+    private function isSpreadsheetFormulaString(mixed $value): bool
+    {
+        return is_string($value) && $value !== '' && preg_match('/^[=\-+@]/', $value) === 1;
     }
 }

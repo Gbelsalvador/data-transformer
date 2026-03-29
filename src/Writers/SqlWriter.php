@@ -32,17 +32,18 @@ class SqlWriter implements WriterInterface
 
         try {
             $this->pdo->beginTransaction();
+            $tableName = $this->quoteIdentifier($this->tableName);
 
             if ($this->truncateFirst) {
-                $this->pdo->exec("TRUNCATE TABLE {$this->tableName}");
+                $this->pdo->exec("TRUNCATE TABLE {$tableName}");
             }
 
             $firstRow = reset($data);
             $columns = array_keys($firstRow);
-            $columnsStr = implode(', ', $columns);
+            $columnsStr = implode(', ', array_map([$this, 'quoteIdentifier'], $columns));
             $placeholders = implode(', ', array_fill(0, count($columns), '?'));
 
-            $sql = "INSERT INTO {$this->tableName} ({$columnsStr}) VALUES ({$placeholders})";
+            $sql = "INSERT INTO {$tableName} ({$columnsStr}) VALUES ({$placeholders})";
             $stmt = $this->pdo->prepare($sql);
 
             foreach ($data as $row) {
@@ -54,8 +55,19 @@ class SqlWriter implements WriterInterface
 
             $this->pdo->commit();
         } catch (\Exception $e) {
-            $this->pdo->rollBack();
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
             throw new TransformerException("SQL write failed: " . $e->getMessage());
         }
+    }
+
+    private function quoteIdentifier(string $identifier): string
+    {
+        if (!preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $identifier)) {
+            throw new TransformerException("Invalid SQL identifier: {$identifier}");
+        }
+
+        return $identifier;
     }
 }
