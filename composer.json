@@ -24,13 +24,14 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Gbelsalvador\\DataTransformer\\Tests\\": "tests/"
+            "Gbelsalvador\\DataTransformer\\Tests\\": "Tests/"
         }
     },
     "minimum-stability": "stable",
     "prefer-stable": true,
 
     "scripts": {
+        "test": "phpunit --configuration phpunit.xml.dist",
         "post-autoload-dump": [
             "@php fix-autoload.php"
         ]

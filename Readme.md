@@ -390,7 +390,7 @@ $transformer->validate(array $rules);
 $result = $transformer->write(WriterInterface $writer);
 ```
 
-### Validation rules supportÃ©es
+### Validation rules supportées
 
 ```php
 required
