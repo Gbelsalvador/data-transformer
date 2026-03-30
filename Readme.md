@@ -1,29 +1,71 @@
 # Data Transformer
 
-[![PHP Version](https://img.shields.io/badge/php-%3E%3D8.0-8892BF.svg)](https://packagist.org/packages/GB/data-transformer)
+[![PHP Version](https://img.shields.io/badge/php-%3E%3D8.0-777BB4.svg)](https://www.php.net/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![PSR-12 Compliant](https://img.shields.io/badge/PSR--12-compliant-brightgreen.svg)](https://www.php-fig.org/psr/psr-12/)
+[![Tests](https://img.shields.io/badge/tests-PHPUnit-success.svg)](phpunit.xml.dist)
+[![Standards](https://img.shields.io/badge/style-PSR--12-brightgreen.svg)](https://www.php-fig.org/psr/psr-12/)
 
-Une bibliothèque PHP professionnelle pour transformer des données entre plusieurs formats en utilisant un tableau PHP normalisé comme format intermédiaire.
+`gbelsalvador/data-transformer` is a PHP library for reading, transforming, validating, and exporting structured data across multiple formats.
 
-## 📋 Fonctionnalités
+It is designed for practical data workflows:
 
-- 🔄 Conversion entre CSV, JSON, XML, SQL et XLSX
-- 🏗️ Architecture SOLID et extensible
-- 📦 Compatible PSR-4, PSR-1, PSR-12
-- 🎯 Typage strict (PHP >= 8.0)
-- 🧪 100% testable
-- 🚀 Prêt pour Packagist
+- import from `CSV`, `JSON`, `XML`, `SQL`, or `XLSX`
+- normalize data into a consistent PHP array structure
+- filter, map, and validate rows through a fluent pipeline
+- export the result to another format
 
-## 📦 Installation
+The project aims to offer a clean developer experience, predictable behavior, and a solid base for production-oriented data conversion workflows.
+
+## Documentation
+
+- French README: [`README.fr.md`](README.fr.md)
+- HTML documentation: [`docs/index.html`](docs/index.html)
+
+## Why This Library
+
+Most conversion utilities stop at file-to-file export. Data Transformer goes further by adding a transformation pipeline between the reader and writer.
+
+That means you can:
+
+- convert formats
+- rename and reshape fields
+- filter rows
+- validate data before export
+- get an execution report with counts and validation errors
+
+## Features
+
+- Multi-format support: `CSV`, `JSON`, `XML`, `SQL`, `XLSX`
+- Fluent transformation pipeline with `read()`, `filter()`, `map()`, `validate()`, `write()`
+- Structured SQL filters for safer queries
+- Execution reporting via `ExecutionResult`
+- Spreadsheet export hardening for CSV/XLSX formula injection
+- XML parsing hardened with `LIBXML_NONET`
+- PHPUnit test suite for pipeline behavior and file integrations
+- PSR-4 autoloading and PSR-12-friendly code style
+
+## Installation
 
 ```bash
-composer require Gbelsalvador/data-transformer
+composer require gbelsalvador/data-transformer
 ```
 
-## 🚀 Utilisation Rapide
+## Requirements
 
-### Structure de base
+- PHP `>= 8.0`
+- `phpoffice/phpspreadsheet` `^5.4`
+
+## Supported Formats
+
+| Format | Read | Write |
+| --- | --- | --- |
+| CSV | Yes | Yes |
+| JSON | Yes | Yes |
+| XML | Yes | Yes |
+| SQL | Yes | Yes |
+| XLSX | Yes | Yes |
+
+## Quick Start
 
 ```php
 use Gbelsalvador\DataTransformer\Core\Transformer;
@@ -31,13 +73,19 @@ use Gbelsalvador\DataTransformer\Readers\CsvReader;
 use Gbelsalvador\DataTransformer\Writers\JsonWriter;
 
 $transformer = new Transformer();
-$reader = new CsvReader('input.csv');
-$writer = new JsonWriter('output.json');
 
-$transformer->transform($reader, $writer);
+$result = $transformer->transform(
+    new CsvReader('input.csv'),
+    new JsonWriter('output.json')
+);
+
+echo $result->rowsRead();
+echo $result->rowsWritten();
 ```
 
-### Pipeline fluent v2
+## Fluent Pipeline
+
+The fluent API is the recommended approach for non-trivial workflows.
 
 ```php
 use Gbelsalvador\DataTransformer\Core\Transformer;
@@ -51,334 +99,195 @@ $result = (new Transformer())
         'id' => 'user_id',
         'full_name' => fn (array $row) => trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? '')),
         'email' => 'email',
-        'country' => 'country'
+        'country' => 'country',
     ])
     ->validate([
         'id' => 'required|integer',
         'full_name' => 'required|max:120',
         'email' => 'required|email',
-        'country' => 'in:FR,BE,CH,CA'
+        'country' => 'in:FR,BE,CH,CA',
     ])
     ->write(new JsonWriter('clean-users.json'));
 
 echo $result->rowsRead();
 echo $result->rowsWritten();
+echo $result->rowsInvalid();
 print_r($result->validationErrors());
 ```
 
-## 📝 Exemples Complets
+## Core Concepts
 
-### 1. CSV vers JSON
+### Readers
+
+Readers load data from a source and return a normalized PHP array:
+
+```php
+[
+    ['column1' => 'value1', 'column2' => 'value2'],
+    ['column1' => 'value3', 'column2' => 'value4'],
+]
+```
+
+Available readers:
+
+- `CsvReader`
+- `JsonReader`
+- `XmlReader`
+- `SqlReader`
+- `XlsxReader`
+
+### Writers
+
+Writers receive normalized rows and persist them to a target format.
+
+Available writers:
+
+- `CsvWriter`
+- `JsonWriter`
+- `XmlWriter`
+- `SqlWriter`
+- `XlsxWriter`
+
+### ExecutionResult
+
+Every completed transformation returns an `ExecutionResult` object with runtime information:
+
+- `rowsRead()`
+- `rowsWritten()`
+- `rowsFilteredOut()`
+- `rowsInvalid()`
+- `errorCount()`
+- `duration()`
+- `validationErrors()`
+
+## Usage Examples
+
+### CSV to JSON
 
 ```php
 use Gbelsalvador\DataTransformer\Core\Transformer;
 use Gbelsalvador\DataTransformer\Readers\CsvReader;
 use Gbelsalvador\DataTransformer\Writers\JsonWriter;
 
-// Configuration avancée du CSV
-$reader = new CsvReader(
-    'input.csv',
-    delimiter: ';',           // Délimiteur personnalisé
-    hasHeader: true,          // Détection automatique des en-têtes
-    enclosure: '"',           // Caractère d'encadrement
-    escape: '\\'              // Caractère d'échappement
+$result = (new Transformer())->transform(
+    new CsvReader('products.csv', delimiter: ';'),
+    new JsonWriter('products.json')
 );
-
-// Configuration du JSON de sortie
-$writer = new JsonWriter(
-    'output.json',
-    flags: JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION
-);
-
-$transformer = new Transformer();
-$transformer->transform($reader, $writer);
 ```
 
-### 2. SQL vers XLSX
+### SQL to XLSX
 
 ```php
 use Gbelsalvador\DataTransformer\Core\Transformer;
 use Gbelsalvador\DataTransformer\Readers\SqlReader;
 use Gbelsalvador\DataTransformer\Writers\XlsxWriter;
 
-// Connexion PDO
-$pdo = new PDO('mysql:host=localhost;dbname=ma_base', 'user', 'password');
+$pdo = new PDO('mysql:host=localhost;dbname=my_database', 'user', 'password');
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-// Lecture depuis une table SQL avec conditions
-$reader = new SqlReader(
-    pdo: $pdo,
-    tableName: 'utilisateurs',
-    columns: ['id', 'nom', 'email', 'date_inscription'],
-    filters: [
-        'actif' => 1,
-        'date_inscription' => [
-            'operator' => '>',
-            'value' => '2026-01-01'
+$result = (new Transformer())->transform(
+    new SqlReader(
+        pdo: $pdo,
+        tableName: 'users',
+        columns: ['id', 'name', 'email', 'created_at'],
+        filters: [
+            'active' => 1,
+            'created_at' => [
+                'operator' => '>=',
+                'value' => '2026-01-01',
+            ],
         ]
-    ]
+    ),
+    new XlsxWriter('active-users.xlsx', sheetName: 'Users')
 );
-
-// Écriture vers XLSX
-$writer = new XlsxWriter(
-    'rapport_utilisateurs.xlsx',
-    sheetName: 'Utilisateurs Actifs'
-);
-
-$transformer = new Transformer();
-$transformer->transform($reader, $writer);
 ```
 
-### 3. XLSX vers CSV avec mapping
-
-```php
-use Gbelsalvador\DataTransformer\Core\Transformer;
-use Gbelsalvador\DataTransformer\Readers\XlsxReader;
-use Gbelsalvador\DataTransformer\Writers\CsvWriter;
-
-// Lecture d'une feuille spécifique d'un fichier Excel
-$reader = new XlsxReader(
-    'rapport.xlsx',
-    sheetName: 'Feuille1',
-    hasHeader: true
-);
-
-// CSV avec en-têtes et formatage personnalisé
-$writer = new CsvWriter(
-    'export.csv',
-    delimiter: ',',
-    enclosure: '"',
-    includeHeader: true
-);
-
-$transformer = new Transformer();
-
-// Traitement des données avant écriture (exemple)
-$data = $reader->read();
-
-// Transformation/modification des données
-$transformedData = array_map(function ($row) {
-    // Exemple: formater les dates
-    if (isset($row['date'])) {
-        $row['date_formatee'] = date('d/m/Y', strtotime($row['date']));
-    }
-    return $row;
-}, $data);
-
-$writer->write($transformedData);
-```
-
-### 4. JSON vers XML
+### JSON to XML
 
 ```php
 use Gbelsalvador\DataTransformer\Core\Transformer;
 use Gbelsalvador\DataTransformer\Readers\JsonReader;
 use Gbelsalvador\DataTransformer\Writers\XmlWriter;
 
-$reader = new JsonReader('donnees.json');
-
-$writer = new XmlWriter(
-    'donnees.xml',
-    rootElement: 'catalogue',
-    rowElement: 'produit'
+$result = (new Transformer())->transform(
+    new JsonReader('catalog.json'),
+    new XmlWriter('catalog.xml', rootElement: 'catalog', rowElement: 'item')
 );
-
-$transformer = new Transformer();
-$transformer->transform($reader, $writer);
 ```
 
-### 5. Pipeline de transformation multiple
+## Validation Rules
+
+The current validation layer supports:
+
+- `required`
+- `email`
+- `numeric`
+- `integer`
+- `boolean`
+- `date`
+- `max:<length>`
+- `in:value1,value2,value3`
+- `same:other_field`
+
+Example:
 
 ```php
-use Gbelsalvador\DataTransformer\Core\Transformer;
-use Gbelsalvador\DataTransformer\Readers\CsvReader;
-use Gbelsalvador\DataTransformer\Writers\JsonWriter;
-use Gbelsalvador\DataTransformer\Writers\XmlWriter;
-
-$reader = new CsvReader('input.csv');
-$transformer = new Transformer();
-
-// Conversion CSV → JSON
-$jsonWriter = new JsonWriter('output.json');
-$transformer->transform($reader, $jsonWriter);
-
-// Réinitialisation du reader (ou création d'un nouveau)
-$reader2 = new CsvReader('input.csv');
-$xmlWriter = new XmlWriter('output.xml');
-$transformer->transform($reader2, $xmlWriter);
+$transformer->validate([
+    'email' => 'required|email',
+    'status' => 'required|in:active,inactive,pending',
+    'name' => 'max:120',
+]);
 ```
 
-### 6. Pipeline avec validation et rapport
+## SQL Safety
+
+`SqlReader` supports two approaches:
+
+1. `filters`
+2. `whereClause` + `whereParams`
+
+The recommended approach is `filters`, because it builds parameterized conditions from a structured array.
 
 ```php
-use Gbelsalvador\DataTransformer\Core\Transformer;
-use Gbelsalvador\DataTransformer\Readers\CsvReader;
-use Gbelsalvador\DataTransformer\Writers\XlsxWriter;
-
-$result = (new Transformer())
-    ->read(new CsvReader('contacts.csv'))
-    ->map([
-        'id' => 'id',
-        'name' => fn (array $row) => strtoupper((string) ($row['name'] ?? '')),
-        'email' => 'email'
-    ])
-    ->validate([
-        'id' => 'required|integer',
-        'name' => 'required|max:80',
-        'email' => 'required|email'
-    ])
-    ->write(new XlsxWriter('contacts-clean.xlsx'));
-
-printf(
-    "Read: %d, Written: %d, Invalid: %d\n",
-    $result->rowsRead(),
-    $result->rowsWritten(),
-    $result->rowsInvalid()
-);
-```
-
-## 🏗️ Architecture
-
-### Structure des dossiers
-
-```
-src/
-├── Contracts/           # Interfaces
-│   ├── ReaderInterface.php
-│   └── WriterInterface.php
-├── Readers/            # Implémentations des readers
-│   ├── CsvReader.php
-│   ├── JsonReader.php
-│   ├── XmlReader.php
-│   ├── SqlReader.php
-│   └── XlsxReader.php
-├── Writers/            # Implémentations des writers
-│   ├── CsvWriter.php
-│   ├── JsonWriter.php
-│   ├── XmlWriter.php
-│   ├── SqlWriter.php
-│   └── XlsxWriter.php
-├── Core/               # Cœur de l'application
-│   └── Transformer.php
-└── Exceptions/         # Exceptions personnalisées
-    └── TransformerException.php
-```
-
-### Format intermédiaire
-
-Tous les readers retournent et tous les writers consomment le même format :
-
-```php
-[
-    [
-        'colonne1' => 'valeur1',
-        'colonne2' => 'valeur2',
-        // ...
-    ],
-    [
-        'colonne1' => 'valeur3',
-        'colonne2' => 'valeur4',
-        // ...
-    ],
-    // ...
-]
-```
-
-## 🔧 Configuration avancée
-
-### Options CSV
-
-```php
-// Reader CSV
-new CsvReader(
-    string $filePath,
-    string $delimiter = ',',
-    bool $hasHeader = true,
-    string $enclosure = '"',
-    string $escape = '\\'
-);
-
-// Writer CSV
-new CsvWriter(
-    string $filePath,
-    string $delimiter = ',',
-    string $enclosure = '"',
-    bool $includeHeader = true
-);
-```
-
-### Options JSON
-
-```php
-// Reader JSON
-new JsonReader(
-    string $filePath,
-    bool $assoc = true
-);
-
-// Writer JSON
-new JsonWriter(
-    string $filePath,
-    int $flags = JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE
-);
-```
-
-### Options XML
-
-```php
-// Reader XML
-new XmlReader(
-    string $filePath,
-    string $rootElement = 'root'
-);
-
-// Writer XML
-new XmlWriter(
-    string $filePath,
-    string $rootElement = 'root',
-    string $rowElement = 'row'
-);
-```
-
-### Options SQL
-
-```php
-// Reader SQL
 new SqlReader(
-    PDO $pdo,
-    string $tableName,
-    array $columns = ['*'],
-    ?string $whereClause = null,
-    array $whereParams = [],
-    array $filters = []
-);
-
-// Writer SQL
-new SqlWriter(
-    PDO $pdo,
-    string $tableName,
-    bool $truncateFirst = false
+    pdo: $pdo,
+    tableName: 'users',
+    filters: [
+        'active' => 1,
+        'role' => [
+            'operator' => 'in',
+            'value' => ['admin', 'editor'],
+        ],
+    ]
 );
 ```
 
-### Options XLSX
+Supported structured operators:
 
-```php
-// Reader XLSX
-new XlsxReader(
-    string $filePath,
-    ?string $sheetName = null,
-    bool $hasHeader = true
-);
+- `=`
+- `!=`
+- `>`
+- `>=`
+- `<`
+- `<=`
+- `like`
+- `in`
+- `is_null`
+- `is_not_null`
 
-// Writer XLSX
-new XlsxWriter(
-    string $filePath,
-    ?string $sheetName = null
-);
-```
+## Security Notes
 
-### Pipeline API
+The library includes several basic hardening measures:
+
+- SQL identifiers are validated before query construction
+- CSV and XLSX exports neutralize formula-like values
+- XML reading uses `LIBXML_NONET` to reduce external entity/network risks
+
+These protections help reduce common issues, but you should still treat file paths, SQL configuration, and user-provided inputs as untrusted data in your application layer.
+
+## API Overview
+
+### Transformer
 
 ```php
 $transformer = new Transformer();
@@ -390,155 +299,136 @@ $transformer->validate(array $rules);
 $result = $transformer->write(WriterInterface $writer);
 ```
 
-### Validation rules supportées
+### Reader Signatures
 
 ```php
-required
-email
-numeric
-integer
-boolean
-date
-max:120
-in:FR,BE,CH
-same:password_confirmation
+new CsvReader(
+    string $filePath,
+    string $delimiter = ',',
+    bool $hasHeader = true,
+    string $enclosure = '"',
+    string $escape = '\\'
+);
+
+new JsonReader(
+    string $filePath,
+    bool $assoc = true
+);
+
+new XmlReader(
+    string $filePath,
+    string $rootElement = 'root'
+);
+
+new SqlReader(
+    PDO $pdo,
+    string $tableName,
+    array $columns = ['*'],
+    ?string $whereClause = null,
+    array $whereParams = [],
+    array $filters = []
+);
+
+new XlsxReader(
+    string $filePath,
+    ?string $sheetName = null,
+    bool $hasHeader = true
+);
 ```
 
-## 🧪 Tests
+### Writer Signatures
+
+```php
+new CsvWriter(
+    string $filePath,
+    string $delimiter = ',',
+    string $enclosure = '"',
+    bool $includeHeader = true
+);
+
+new JsonWriter(
+    string $filePath,
+    int $flags = JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE
+);
+
+new XmlWriter(
+    string $filePath,
+    string $rootElement = 'root',
+    string $rowElement = 'row'
+);
+
+new SqlWriter(
+    PDO $pdo,
+    string $tableName,
+    bool $truncateFirst = false
+);
+
+new XlsxWriter(
+    string $filePath,
+    ?string $sheetName = null
+);
+```
+
+## Testing
+
+Install development dependencies:
 
 ```bash
-# Installer les dépendances de développement
 composer install
+```
 
-# Exécuter les tests
+Run the test suite:
+
+```bash
 composer test
-
-# Exécuter les tests avec couverture
-composer test-coverage
 ```
 
-## 🚀 Extensibilité
+Current coverage includes:
 
-### Créer un nouveau Reader
+- pipeline behavior
+- validation behavior
+- CSV/JSON/XML integration flows
+- SQL reader/writer tests when `pdo_sqlite` is available
 
-```php
-namespace App\Readers;
+Note: SQL integration tests are skipped automatically if the `pdo_sqlite` driver is not enabled in your PHP environment.
 
-use Gbelsalvador\DataTransformer\Contracts\ReaderInterface;
+## Project Structure
 
-class YamlReader implements ReaderInterface
-{
-    public function __construct(private string $filePath) {}
-    
-    public function read(): array
-    {
-        // Implémentation YAML
-        $data = yaml_parse_file($this->filePath);
-        return $data ?: [];
-    }
-}
+```text
+src/
+  Contracts/
+  Core/
+  Exceptions/
+  Readers/
+  Writers/
+
+Tests/
+  FileIntegrationTest.php
+  SqlReadWriteTest.php
+  TransformerPipelineTest.php
 ```
 
-### Créer un nouveau Writer
+## Roadmap
 
-```php
-namespace App\Writers;
+Planned improvements for upcoming versions:
 
-use Gbelsalvador\DataTransformer\Contracts\WriterInterface;
+- streaming for large datasets
+- richer schema validation
+- more transformation primitives
+- append/merge output strategies
+- additional input sources such as HTTP or YAML
 
-class PdfWriter implements WriterInterface
-{
-    public function __construct(private string $filePath) {}
-    
-    public function write(array $data): void
-    {
-        // Implémentation PDF
-        $pdf = new FPDF();
-        // ... traitement des données
-        $pdf->Output($this->filePath, 'F');
-    }
-}
-```
+## Contributing
 
-## 📊 Formats supportés
+Contributions, bug reports, and improvement ideas are welcome.
 
-| Format | Lecture | Écriture | Notes |
-|--------|---------|----------|-------|
-| CSV | ✅ | ✅ | Détection auto des headers, délimiteur configurable |
-| JSON | ✅ | ✅ | UTF-8, pretty print, options de flags |
-| XML | ✅ | ✅ | Racine configurable, attributs supportés |
-| SQL | ✅ | ✅ | PDO uniquement, requêtes dynamiques |
-| XLSX | ✅ | ✅ | PhpSpreadsheet, feuilles multiples |
+If you want to contribute:
 
-## 🗺️ Roadmap
+1. Fork the repository
+2. Create a feature branch
+3. Add or update tests
+4. Open a pull request with a clear description
 
-- [ ] Support YAML
-- [ ] Export PDF
-- [ ] Validation des données
-- [ ] Support streaming (fichiers volumineux)
-- [ ] Transformateurs personnalisés (mapping)
-- [ ] Outil CLI
-- [ ] Plus de drivers de base de données
-- [ ] Cache des transformations
-- [ ] Support des collections
-- [ ] Middleware pipeline
+## License
 
-## 🤝 Contribution
-
-Les contributions sont les bienvenues ! Voici comment contribuer :
-
-1. Fork le projet
-2. Crée une branche (`git checkout -b feature/amazing-feature`)
-3. Commit les changements (`git commit -m 'Add amazing feature'`)
-4. Push la branche (`git push origin feature/amazing-feature`)
-5. Ouvre une Pull Request
-
-### Standards de code
-
-- Respecter PSR-1, PSR-12
-- Utiliser le typage strict
-- Ajouter des tests unitaires
-- Documenter les nouvelles fonctionnalités
-
-## 📄 Licence
-
-Cette bibliothèque est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
-
-## 👥 Auteurs
-
-- **GB el salvador** - *Développement initial* - [GitHub](https://github.com/gbelsalvador)
-
-## 🙏 Remerciements
-
-- PHP-FIG pour les standards PSR
-- PhpSpreadsheet pour le support XLSX
-- Tous les contributeurs
-
-## ⚠️ Dépannage
-
-### Problèmes courants
-
-1. **Fichier non trouvé** : Vérifiez les chemins absolus/relatifs
-2. **Permissions** : Assurez-vous d'avoir les droits d'écriture
-3. **Encodage** : Utilisez UTF-8 pour tous les fichiers texte
-4. **PDO** : Configurez PDO::ATTR_ERRMODE sur ERRMODE_EXCEPTION
-
-### Debug
-
-```php
-try {
-    $transformer->transform($reader, $writer);
-} catch (\Gbelsalvador\DataTransformer\Exceptions\TransformerException $e) {
-    echo "Erreur de transformation: " . $e->getMessage();
-    // Log ou traitement d'erreur
-}
-```
-
-## 📞 Support
-
-- [Issues GitHub](https://github.com/GB/data-transformer/issues)
-- Documentation : Voir les exemples ci-dessus
-
----
-
-⭐ Si ce projet vous est utile, n'hésitez pas à lui donner une étoile sur GitHub !
+This project is released under the [MIT License](LICENSE).

@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Transformer Documentation</title>
+    <meta name="description" content="Documentation officielle de Data Transformer, bibliothèque PHP pour lire, transformer, valider et exporter des données structurées.">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="site-header">
+        <div class="site-header-inner">
+            <div class="brand">
+                <span class="brand-mark">DT</span>
+                <div>
+                    <div>Data Transformer</div>
+                    <small>Documentation officielle</small>
+                </div>
+            </div>
+            <nav class="top-nav">
+                <a href="../Readme.md">README EN</a>
+                <a href="../README.fr.md">README FR</a>
+                <a href="#installation">Installation</a>
+                <a href="#pipeline">Pipeline</a>
+                <a href="#api">API</a>
+            </nav>
+        </div>
+    </header>
+
+    <section class="hero-wrap">
+        <div class="hero">
+            <article class="hero-card">
+                <span class="eyebrow">PHP Data Workflows</span>
+                <h1>Une base sérieuse pour lire, transformer et exporter des données en PHP.</h1>
+                <p>
+                    Data Transformer est une bibliothèque orientée workflows de données. Elle unifie la lecture de plusieurs formats,
+                    ajoute un pipeline de transformation métier, puis écrit le résultat dans une sortie exploitable avec un rapport d’exécution.
+                </p>
+                <div class="hero-actions">
+                    <a class="button primary" href="#quick-start">Commencer</a>
+                    <a class="button" href="#examples">Voir les exemples</a>
+                </div>
+                <div class="badge-row">
+                    <span class="mini-badge">CSV</span>
+                    <span class="mini-badge">JSON</span>
+                    <span class="mini-badge">XML</span>
+                    <span class="mini-badge">SQL</span>
+                    <span class="mini-badge">XLSX</span>
+                </div>
+            </article>
+            <aside class="hero-panel">
+                <h2>Ce que la bibliothèque apporte</h2>
+                <ul>
+                    <li>Une API homogène pour plusieurs formats d’entrée et de sortie.</li>
+                    <li>Un pipeline fluent pour le filtrage, le mapping et la validation.</li>
+                    <li>Des garde-fous de sécurité sur SQL, XML, CSV et XLSX.</li>
+                    <li>Un rapport d’exécution orienté exploitation.</li>
+                    <li>Une base claire pour construire des flux de données applicatifs.</li>
+                </ul>
+                <div class="callout success">
+                    <strong>Positionnement</strong><br>
+                    Data Transformer n’est pas uniquement un convertisseur de fichiers. C’est une brique de transformation de données pour projets PHP.
+                </div>
+            </aside>
+        </div>
+    </section>
+
+    <main class="docs-layout">
+        <aside class="toc-card">
+            <h2>Sommaire</h2>
+            <ul>
+                <li><a href="#overview">Vue d’ensemble</a></li>
+                <li><a href="#installation">Installation</a></li>
+                <li><a href="#quick-start">Démarrage rapide</a></li>
+                <li><a href="#pipeline">Pipeline fluent</a></li>
+                <li><a href="#formats">Formats supportés</a></li>
+                <li><a href="#validation">Validation</a></li>
+                <li><a href="#sql">SQL et filtres</a></li>
+                <li><a href="#security">Sécurité</a></li>
+                <li><a href="#api">Référence API</a></li>
+                <li><a href="#examples">Exemples</a></li>
+                <li><a href="#testing">Tests</a></li>
+                <li><a href="#roadmap">Roadmap</a></li>
+            </ul>
+        </aside>
+
+        <div>
+            <section id="overview" class="content-card">
+                <div class="section-kicker">Présentation</div>
+                <h2>Vue d’ensemble</h2>
+                <p>
+                    La bibliothèque repose sur un principe simple : tous les readers renvoient un tableau PHP normalisé,
+                    puis le pipeline transforme ce tableau avant qu’un writer le persiste dans un format cible.
+                </p>
+                <div class="grid-two">
+                    <div class="callout">
+                        <strong>Entrées</strong><br>
+                        CSV, JSON, XML, SQL, XLSX
+                    </div>
+                    <div class="callout">
+                        <strong>Sorties</strong><br>
+                        CSV, JSON, XML, SQL, XLSX
+                    </div>
+                </div>
+                <pre><code class="language-php">$rows = [
+    ['id' => 1, 'name' => 'Ada'],
+    ['id' => 2, 'name' => 'Grace'],
+];</code></pre>
+            </section>
+
+            <section id="installation" class="content-card">
+                <div class="section-kicker">Mise en place</div>
+                <h2>Installation</h2>
+                <pre><code class="language-bash">composer require gbelsalvador/data-transformer</code></pre>
+                <h3>Prérequis</h3>
+                <ul>
+                    <li>PHP 8.0 ou supérieur</li>
+                    <li>PhpSpreadsheet pour les fichiers XLSX</li>
+                    <li>PDO pour les intégrations SQL</li>
+                </ul>
+                <div class="callout warning">
+                    <strong>Note</strong><br>
+                    Pour exécuter les tests SQL localement, activez le driver <code>pdo_sqlite</code>.
+                </div>
+            </section>
+
+            <section id="quick-start" class="content-card">
+                <div class="section-kicker">Premiers pas</div>
+                <h2>Démarrage rapide</h2>
+                <pre><code class="language-php">use Gbelsalvador\DataTransformer\Core\Transformer;
+use Gbelsalvador\DataTransformer\Readers\CsvReader;
+use Gbelsalvador\DataTransformer\Writers\JsonWriter;
+
+$transformer = new Transformer();
+
+$result = $transformer->transform(
+    new CsvReader('input.csv'),
+    new JsonWriter('output.json')
+);
+
+echo $result->rowsRead();
+echo $result->rowsWritten();</code></pre>
+                <p><code>transform()</code> retourne un objet <code>ExecutionResult</code> utilisable pour le reporting et le logging.</p>
+            </section>
+
+            <section id="pipeline" class="content-card">
+                <div class="section-kicker">Transformation</div>
+                <h2>Pipeline fluent</h2>
+                <p>L’API fluent est l’approche recommandée pour les cas d’usage métier.</p>
+                <pre><code class="language-php">use Gbelsalvador\DataTransformer\Core\Transformer;
+use Gbelsalvador\DataTransformer\Readers\CsvReader;
+use Gbelsalvador\DataTransformer\Writers\JsonWriter;
+
+$result = (new Transformer())
+    ->read(new CsvReader('users.csv'))
+    ->filter(fn (array $row) => ($row['active'] ?? null) === '1')
+    ->map([
+        'id' => 'user_id',
+        'full_name' => fn (array $row) => trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? '')),
+        'email' => 'email',
+        'country' => 'country',
+    ])
+    ->validate([
+        'id' => 'required|integer',
+        'full_name' => 'required|max:120',
+        'email' => 'required|email',
+        'country' => 'in:FR,BE,CH,CA',
+    ])
+    ->write(new JsonWriter('clean-users.json'));</code></pre>
+                <ul>
+                    <li><code>read()</code> charge les données.</li>
+                    <li><code>filter()</code> garde les lignes utiles.</li>
+                    <li><code>map()</code> renomme, projette ou calcule des champs.</li>
+                    <li><code>validate()</code> applique les règles de validation.</li>
+                    <li><code>write()</code> persiste le résultat et retourne un rapport.</li>
+                </ul>
+            </section>
+
+            <section id="formats" class="content-card">
+                <div class="section-kicker">Compatibilité</div>
+                <h2>Formats supportés</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Format</th>
+                            <th>Lecture</th>
+                            <th>Écriture</th>
+                            <th>Remarques</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>CSV</td><td>Oui</td><td>Oui</td><td>Délimiteur, enclosure et entêtes configurables</td></tr>
+                        <tr><td>JSON</td><td>Oui</td><td>Oui</td><td>Support des flags d’encodage</td></tr>
+                        <tr><td>XML</td><td>Oui</td><td>Oui</td><td>Éléments racine et ligne configurables</td></tr>
+                        <tr><td>SQL</td><td>Oui</td><td>Oui</td><td>Intégration PDO avec filtres structurés</td></tr>
+                        <tr><td>XLSX</td><td>Oui</td><td>Oui</td><td>Basé sur PhpSpreadsheet</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="validation" class="content-card">
+                <div class="section-kicker">Qualité des données</div>
+                <h2>Validation</h2>
+                <p>La validation permet d’éliminer les lignes non conformes avant export et de produire un rapport d’erreurs.</p>
+                <ul>
+                    <li><code>required</code></li>
+                    <li><code>email</code></li>
+                    <li><code>numeric</code></li>
+                    <li><code>integer</code></li>
+                    <li><code>boolean</code></li>
+                    <li><code>date</code></li>
+                    <li><code>max:&lt;longueur&gt;</code></li>
+                    <li><code>in:valeur1,valeur2,valeur3</code></li>
+                    <li><code>same:autre_colonne</code></li>
+                </ul>
+                <pre><code class="language-php">$result = (new Transformer())
+    ->read($reader)
+    ->validate([
+        'email' => 'required|email',
+        'status' => 'required|in:active,inactive,pending',
+        'name' => 'max:120',
+    ])
+    ->write($writer);</code></pre>
+            </section>
+
+            <section id="sql" class="content-card">
+                <div class="section-kicker">Base de données</div>
+                <h2>SQL et filtres structurés</h2>
+                <p>
+                    <code>SqlReader</code> accepte un tableau de filtres structurés pour construire un <code>WHERE</code>
+                    paramétré. Cette approche est la plus sûre et la plus lisible pour les usages applicatifs.
+                </p>
+                <pre><code class="language-php">new SqlReader(
+    pdo: $pdo,
+    tableName: 'users',
+    columns: ['id', 'name', 'email'],
+    filters: [
+        'active' => 1,
+        'created_at' => [
+            'operator' => '>=',
+            'value' => '2026-01-01',
+        ],
+    ]
+);</code></pre>
+                <h3>Opérateurs disponibles</h3>
+                <ul>
+                    <li><code>=</code></li>
+                    <li><code>!=</code></li>
+                    <li><code>&gt;</code></li>
+                    <li><code>&gt;=</code></li>
+                    <li><code>&lt;</code></li>
+                    <li><code>&lt;=</code></li>
+                    <li><code>like</code></li>
+                    <li><code>in</code></li>
+                    <li><code>is_null</code></li>
+                    <li><code>is_not_null</code></li>
+                </ul>
+                <div class="callout warning">
+                    <strong>Bon réflexe</strong><br>
+                    Préférez <code>filters</code> à <code>whereClause</code> dès que possible pour limiter les erreurs de construction de requêtes.
+                </div>
+            </section>
+
+            <section id="security" class="content-card">
+                <div class="section-kicker">Robustesse</div>
+                <h2>Sécurité</h2>
+                <p>La bibliothèque embarque plusieurs garde-fous utiles sur les flux de données les plus courants.</p>
+                <div class="grid-two">
+                    <div class="callout success">
+                        <strong>Mesures intégrées</strong><br>
+                        Validation des identifiants SQL, neutralisation des formules CSV/XLSX, lecture XML avec <code>LIBXML_NONET</code>.
+                    </div>
+                    <div class="callout warning">
+                        <strong>À traiter côté projet</strong><br>
+                        Contrôle d’accès, validation métier, provenance des fichiers, politiques d’upload et usage des chemins système.
+                    </div>
+                </div>
+            </section>
+
+            <section id="api" class="content-card">
+                <div class="section-kicker">Référence</div>
+                <h2>Référence API</h2>
+                <h3>Transformer</h3>
+                <pre><code class="language-php">$transformer = new Transformer();
+
+$transformer->read(ReaderInterface $reader);
+$transformer->filter(callable $callback);
+$transformer->map(callable|array $mapping);
+$transformer->validate(array $rules);
+$result = $transformer->write(WriterInterface $writer);</code></pre>
+
+                <h3>Readers disponibles</h3>
+                <pre><code class="language-php">new CsvReader(string $filePath, string $delimiter = ',', bool $hasHeader = true, string $enclosure = '"', string $escape = '\\');
+new JsonReader(string $filePath, bool $assoc = true);
+new XmlReader(string $filePath, string $rootElement = 'root');
+new SqlReader(PDO $pdo, string $tableName, array $columns = ['*'], ?string $whereClause = null, array $whereParams = [], array $filters = []);
+new XlsxReader(string $filePath, ?string $sheetName = null, bool $hasHeader = true);</code></pre>
+
+                <h3>Writers disponibles</h3>
+                <pre><code class="language-php">new CsvWriter(string $filePath, string $delimiter = ',', string $enclosure = '"', bool $includeHeader = true);
+new JsonWriter(string $filePath, int $flags = JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+new XmlWriter(string $filePath, string $rootElement = 'root', string $rowElement = 'row');
+new SqlWriter(PDO $pdo, string $tableName, bool $truncateFirst = false);
+new XlsxWriter(string $filePath, ?string $sheetName = null);</code></pre>
+            </section>
+
+            <section id="examples" class="content-card">
+                <div class="section-kicker">Cas d’usage</div>
+                <h2>Exemples d’intégration</h2>
+                <h3>CSV vers JSON</h3>
+                <pre><code class="language-php">$result = (new Transformer())->transform(
+    new CsvReader('products.csv', delimiter: ';'),
+    new JsonWriter('products.json')
+);</code></pre>
+
+                <h3>SQL vers XLSX</h3>
+                <pre><code class="language-php">$result = (new Transformer())->transform(
+    new SqlReader(
+        pdo: $pdo,
+        tableName: 'users',
+        columns: ['id', 'name', 'email', 'created_at'],
+        filters: [
+            'active' => 1,
+            'created_at' => ['operator' => '>=', 'value' => '2026-01-01'],
+        ]
+    ),
+    new XlsxWriter('active-users.xlsx', sheetName: 'Users')
+);</code></pre>
+
+                <h3>JSON vers XML</h3>
+                <pre><code class="language-php">$result = (new Transformer())->transform(
+    new JsonReader('catalog.json'),
+    new XmlWriter('catalog.xml', rootElement: 'catalog', rowElement: 'item')
+);</code></pre>
+            </section>
+
+            <section id="testing" class="content-card">
+                <div class="section-kicker">Qualité</div>
+                <h2>Tests</h2>
+                <pre><code class="language-bash">composer install
+composer test</code></pre>
+                <ul>
+                    <li>Tests unitaires sur le pipeline fluent.</li>
+                    <li>Tests d’intégration sur CSV, JSON et XML.</li>
+                    <li>Tests SQL prêts à s’exécuter lorsque <code>pdo_sqlite</code> est activé.</li>
+                </ul>
+            </section>
+
+            <section id="roadmap" class="content-card">
+                <div class="section-kicker">Avenir</div>
+                <h2>Roadmap</h2>
+                <ul>
+                    <li>Support du streaming pour les gros volumes.</li>
+                    <li>Validation de schéma plus riche.</li>
+                    <li>Primitives de transformation supplémentaires.</li>
+                    <li>Modes d’append et stratégies de fusion.</li>
+                    <li>Nouvelles sources d’entrée comme HTTP ou YAML.</li>
+                </ul>
+            </section>
+        </div>
+    </main>
+
+    <footer class="page-footer">
+        <div class="page-footer-inner">
+            <div>Data Transformer Documentation</div>
+            <div>MIT License • PHP 8+ • Documentation HTML statique</div>
+        </div>
+    </footer>
+</body>
+</html>
